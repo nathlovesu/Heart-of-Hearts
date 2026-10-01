@@ -1,0 +1,19 @@
+.character-slot[hidden]{display:none!important}
+.seat-0:has(.character-slot){min-height:240px;padding-left:220px;display:flex;flex-direction:column;justify-content:center}
+.character-slot{position:absolute;left:-12px;bottom:0;width:240px;height:260px;pointer-events:none;isolation:isolate}
+.character-sprite{position:absolute;inset:0;background-size:300% 100%;background-position:50% 50%;background-repeat:no-repeat;transform-origin:50% 100%;animation:character-breathe 4s ease-in-out infinite;filter:drop-shadow(0 7px 9px #0008)}
+.character-aura{position:absolute;inset:40% 8% 0;background:radial-gradient(ellipse,#dc486c26,transparent 70%);z-index:-1}
+.character-hurt .character-sprite{background-position:0 50%;animation:character-flinch 1.2s ease-out both}
+.character-play .character-sprite{background-position:100% 50%;animation:character-play 1.2s ease-out both}
+.character-legendary .character-sprite{background-position:100% 50%;animation:character-legendary 1.8s ease-out both}
+.character-legendary .character-aura{inset:0;background:radial-gradient(ellipse,#fbd47780,#c85fff38 45%,transparent 70%);animation:character-flare 1.8s ease-out both}
+.character-lost-heart{position:absolute;left:55%;top:38%;color:#ff7196;font-size:34px;font-weight:bold;text-shadow:0 2px 12px #901030;animation:character-heart 1.2s ease-out both}
+.character-eliminated{filter:grayscale(.85);opacity:.55}
+@keyframes character-breathe{50%{transform:translateY(-3px) rotate(.5deg)}}
+@keyframes character-flinch{0%,100%{transform:translateX(0)}15%,45%{transform:translateX(-7px) rotate(-2deg)}30%,60%{transform:translateX(5px)}15%{filter:drop-shadow(0 0 14px #f35c7e)}}
+@keyframes character-play{0%{transform:translateY(5px) rotate(-2deg)}35%{transform:translateY(-8px) scale(1.04) rotate(1deg)}100%{transform:none}}
+@keyframes character-legendary{0%{transform:scale(.96)}35%{transform:translateY(-12px) scale(1.08);filter:drop-shadow(0 0 18px #f7cc76)}100%{transform:none}}
+@keyframes character-flare{0%,100%{opacity:0;transform:scale(.8)}35%{opacity:1;transform:scale(1.2)}}
+@keyframes character-heart{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-70px) rotate(14deg)}}
+@media(max-width:600px){.seat-0:has(.character-slot){padding-left:140px;min-height:190px}.character-slot{width:165px;height:190px;left:-8px}}
+@media(prefers-reduced-motion:reduce){.character-slot *{animation:none!important}}

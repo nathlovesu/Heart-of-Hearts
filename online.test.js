@@ -1,0 +1,54 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {createServer}=require('../server.js');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+test('opening waits for shuffle before allowing moves and audio assets are served',async t=>{
+ const {req,base}=await fixture(t,{eventMs:1});const host=(await req('/api/rooms',{name:'Host'})).data,p='/api/rooms/'+host.code,sessions=[host];
+ for(let i=1;i<4;i++){const guest=(await req(p+'/join',{name:'Guest'})).data;sessions.push(guest);await req(p+'/ready',{ready:true},guest.token);}
+ await req(p+'/start',{},host.token);let view=(await req(p,undefined,host.token)).data;assert(view.introEndsAt>Date.now());assert(view.match.busy);assert.equal((await req(p+'/action',{kind:'draw'},sessions[view.match.control].token)).status,409);
+ await sleep(2900);view=(await req(p,undefined,host.token)).data;assert.equal(view.introEndsAt,null);assert.equal(view.match.busy,false);assert(view.turnDeadline>Date.now()+11000);
+ for(const file of ['alyazia.png','packs-menu.mp3','sound-basic-play.mp3','sound-heart-play.mp3','sound-legendary-play.mp3','sound-instant-reveal.mp3','sound-heal.mp3']){const response=await fetch(base+'/'+file,{method:'HEAD'});assert.equal(response.status,200,file);assert(Number(response.headers.get('content-length'))>1000);}
+ await req(p+'/action',{kind:'draw'},sessions[view.match.control].token);await sleep(20);view=(await req(p,undefined,host.token)).data;assert(view.soundEvents.some(e=>e.type==='draw'));assert(view.soundEvents.filter(e=>e.type==='draw').every(e=>!('card' in e)));
+});
+test('room chat is authenticated, scoped, author-owned, length-limited and moderated on the server',async t=>{
+ const {req}=await fixture(t);const host=(await req('/api/rooms',{name:'Host'})).data,p='/api/rooms/'+host.code;
+ const friend=(await req(p+'/join',{name:'Friend'})).data,other=(await req('/api/rooms',{name:'Other'})).data;
+ assert.equal((await req(p+'/chat',{text:'Hello'})).status,401);
+ assert.equal((await req(p+'/chat',{text:'Hello'},other.token)).status,401);
+ assert.equal((await req(p+'/chat',{text:'Hello table!',name:'Fake',seat:3},host.token)).status,200);
+ const received=(await req(p,undefined,friend.token)).data.chat;assert.equal(received.length,1);assert.equal(received[0].name,'Host');assert.equal(received[0].seat,0);assert.equal(received[0].text,'Hello table!');
+ assert.equal((await req('/api/rooms/'+other.code,undefined,other.token)).data.chat.length,0);
+ assert.equal((await req(p+'/chat',{text:'spam'},host.token)).status,429);
+ assert.equal((await req(p+'/chat',{text:'x'.repeat(241)},friend.token)).status,400);
+ const slur=String.fromCharCode(110,105,103,103,101,114),variant=String.fromCharCode(110,105,103,103,97);
+ for(const text of [slur,variant,slur.toUpperCase(),slur.split('').join(' . '),slur.replace('i','1').replace('e','3')])assert.equal((await req(p+'/chat',{text},friend.token)).status,400);
+ assert.equal((await req('/api/rooms',{name:slur})).status,400);
+ assert.equal((await req(p+'/chat',{text:'shit, damn — nice card!'},friend.token)).status,200);
+ assert.equal((await req(p,undefined,host.token)).data.chat.length,2);
+ for(const seat of [2,3])await req(p+'/bot',{seat},host.token);await req(p+'/ready',{ready:true},friend.token);await req(p+'/start',{},host.token);
+ assert.equal((await req(p,undefined,friend.token)).data.chat.length,2);
+});
+test('next move timer is shared, defaults to fifteen seconds and auto-ends an idle turn',async t=>{
+ const {req}=await fixture(t,{turnMs:100});const host=(await req('/api/rooms',{name:'Timer host'})).data,prefix='/api/rooms/'+host.code,sessions=[host];
+ for(let i=1;i<4;i++)sessions.push((await req(prefix+'/join',{name:'Timer '+i})).data);
+ for(const s of sessions)await req(prefix+'/ready',{ready:true},s.token);
+ await req(prefix+'/start',{},host.token);
+ const initial=(await req(prefix,undefined,host.token)).data;
+ const guest=(await req(prefix,undefined,sessions[1].token)).data;
+ assert.equal(initial.turnDeadline,guest.turnDeadline);assert(initial.turnDeadline>Date.now()-100);
+ await sleep(1200);const next=(await req(prefix,undefined,host.token)).data;
+ assert(next.match.turn!==initial.match.turn||next.match.busy||next.prompts.length);
+ const {req:normal}=await fixture(t);const a=(await normal('/api/rooms',{name:'Normal'})).data,p='/api/rooms/'+a.code;
+ for(const seat of [1,2,3]){const g=(await normal(p+'/join',{name:'Human'})).data;await normal(p+'/ready',{ready:true},g.token);}
+ await normal(p+'/start',{},a.token);const view=(await normal(p,undefined,a.token)).data;
+ assert(view.turnDeadline-Date.now()>14000&&view.turnDeadline-Date.now()<=15000);
+});
+async function fixture(t,options={}){const server=createServer({choiceMs:1000,reactionMs:50,legendaryMs:50,botMs:5,eventMs:0,...options});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;t.after(()=>new Promise(r=>{server.closeAllConnections();server.close(r);}));const req=async(path,body,token)=>{const response=await fetch(base+path,{method:body===undefined?'GET':'POST',headers:{...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body)});return {status:response.status,data:await response.json()};};return {server,base,req};}
+test('room codes, private sessions, seats, readiness, host permissions and reconnect',async t=>{const {req}=await fixture(t);const host=(await req('/api/rooms',{name:'Host'})).data;assert.match(host.code,/^[A-F0-9]{6}$/);assert.equal(host.token.length,64);const prefix='/api/rooms/'+host.code;const guests=[];for(let i=1;i<4;i++)guests.push((await req(prefix+'/join',{name:'Friend '+i})).data);assert.equal((await req(prefix+'/join',{name:'Fifth'})).status,409);assert.equal((await req(prefix)).status,401);assert.equal((await req(prefix,undefined,'wrong')).status,401);assert.equal((await req(prefix+'/start',{},guests[0].token)).status,403);assert.equal((await req(prefix+'/start',{},host.token)).status,409);assert.equal((await req(prefix+'/bot',{seat:1},host.token)).status,409);for(const g of guests)await req(prefix+'/ready',{ready:true},g.token);assert.equal((await req(prefix+'/start',{},host.token)).status,200);const sessions=[host,...guests];for(let i=0;i<4;i++){const {data}=await req(prefix,undefined,sessions[i].token);assert.equal(data.you,i);assert.equal(data.match.players[i].hand.length,5);assert(data.match.players[i].hand.every(h=>h.card));assert(data.match.players.filter(p=>p.id!==i).every(p=>p.hand.every(h=>!h.card)));assert(!JSON.stringify(data).includes(host.token));assert(!('deck' in data.match));assert.equal(data.match.deckCount>0,true);}const view=(await req(prefix,undefined,host.token)).data;const wrong=(view.match.turn+1)%4;assert.equal((await req(prefix+'/action',{kind:'draw'},sessions[wrong].token)).status,403);assert.equal((await req(prefix+'/action',{kind:'play',card:'Torment'},sessions[view.match.turn].token)).status,400);assert.equal((await req(prefix,undefined,host.token)).data.you,0);});
+test('choices stay private and forged answers are rejected; real matches progress',async t=>{const {req}=await fixture(t);const host=(await req('/api/rooms',{name:'A'})).data,prefix='/api/rooms/'+host.code,sessions=[host];for(let i=1;i<4;i++)sessions.push((await req(prefix+'/join',{name:'P'+i})).data);for(const s of sessions)await req(prefix+'/ready',{ready:true},s.token);await req(prefix+'/start',{},host.token);let draws=0,ended=false;
+for(let step=0;step<800;step++){const views=await Promise.all(sessions.map(s=>req(prefix,undefined,s.token)));const state=views[0].data;assert(!state.error,state.error);for(let i=0;i<4;i++){const v=views[i].data;for(const p of v.prompts){assert.equal((await req(prefix+'/answer',{prompt:p.id,value:p.options[0]?.value},sessions[(i+1)%4].token)).status,409);const answer=await req(prefix+'/answer',{prompt:p.id,value:p.kind==='reaction'?null:p.options[0].value},sessions[i].token);assert([200,409].includes(answer.status));}for(const p of v.match.players)if(p.id!==i&&p.controller!==i&&!v.match.ended)assert(p.hand.every(h=>!h.card||h.revealed));}
+if(state.match.ended){ended=true;break;}if(!state.match.busy){const current=sessions[state.match.control];const r=await req(prefix+'/action',{kind:'draw'},current.token);assert.equal(r.status,200);draws++;}await sleep(5);}
+assert(draws>5);assert(ended,'A real four-human match must finish');});
+test('bots, public room matching, static files and cross-origin protection',async t=>{const {req,base}=await fixture(t);const a=(await req('/api/rooms',{name:'A',public:true})).data,b=(await req('/api/rooms',{name:'B',public:true})).data;assert.equal(a.code,b.code);const prefix='/api/rooms/'+a.code;assert.equal((await req(prefix+'/bot',{seat:2},b.token)).status,403);for(const seat of [2,3])assert.equal((await req(prefix+'/bot',{seat},a.token)).status,200);await req(prefix+'/ready',{ready:true},b.token);await req(prefix+'/start',{},a.token);const view=(await req(prefix,undefined,a.token)).data;assert.equal(view.seats.filter(s=>s.bot).length,2);assert.equal((await fetch(base+'/online.html')).status,200);assert.equal((await fetch(base+'/server.js')).status,404);assert.equal((await fetch(base+'/tests/online.test.js')).status,404);const blocked=await fetch(base+'/api/rooms',{method:'POST',headers:{Origin:'https://unrelated.example','Content-Type':'application/json'},body:'{}'});assert.equal(blocked.status,403);});
+test('legal card plays, target choices, effects and draws run to a real ending',async t=>{const {req}=await fixture(t);const host=(await req('/api/rooms',{name:'Host'})).data,prefix='/api/rooms/'+host.code,sessions=[host];for(let i=1;i<4;i++)sessions.push((await req(prefix+'/join',{name:'Friend '+i})).data);for(const s of sessions)await req(prefix+'/ready',{ready:true},s.token);await req(prefix+'/start',{},host.token);let plays=0,moves=0,finished=false;
+for(let step=0;step<2000;step++){const all=await Promise.all(sessions.map(s=>req(prefix,undefined,s.token)));const state=all[0].data;assert(!state.error,state.error);for(let i=0;i<4;i++)for(const p of all[i].data.prompts)await req(prefix+'/answer',{prompt:p.id,value:p.kind==='reaction'?null:p.options[0].value},sessions[i].token);if(state.match.ended){finished=true;break;}if(!state.match.busy){const active=all[state.match.control].data,legal=active.match.legal;const useCard=legal.length&&moves%3!==2;const action=useCard?{kind:'play',card:legal[0]}:{kind:'draw'};const r=await req(prefix+'/action',action,sessions[state.match.control].token);assert.equal(r.status,200);moves++;if(useCard)plays++;}await sleep(5);}assert(plays>0);assert(finished,'A match using playable cards must finish');});

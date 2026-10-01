@@ -1,0 +1,1 @@
+Reserved character slot. Hidden until artwork is supplied and HOHCharacters.slots is enabled.
