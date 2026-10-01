@@ -1,9 +1,10 @@
 /* User-provided sound design. Instant cues are scoped to their resolution. */
 window.HOHSounds=(()=>{
- const active=new Set();let instant=null,joker=null,jokerFade=null;
- function play(file,volume=.8){const a=new Audio('sound-'+file);HOHSettings.bind(a,file==='joker-song.mp3'?'music':'effects',volume);active.add(a);a.addEventListener('ended',()=>active.delete(a),{once:true});a.play().catch(()=>active.delete(a));return a;}
- function stop(a){if(!a)return;a.pause();a.currentTime=0;active.delete(a);}
- function finishInstant(id){if(!instant||(id&&instant.id!==id))return;clearTimeout(instant.timer);stop(instant.motif);stop(instant.effect);instant=null;}
+ const active=new Set(),baseVolumes=new WeakMap(),fades=new Map();let instant=null,joker=null,jokerFade=null;
+ function play(file,volume=.8){const a=new Audio('sound-'+file);HOHSettings.bind(a,file==='joker-song.mp3'?'music':'effects',volume);baseVolumes.set(a,volume);active.add(a);a.addEventListener('ended',()=>active.delete(a),{once:true});a.play().catch(()=>active.delete(a));return a;}
+ function stop(a){if(!a)return;clearInterval(fades.get(a));fades.delete(a);a.pause();a.currentTime=0;active.delete(a);}
+ function fadeOut(a){if(!a)return;if(a.paused||a.ended){stop(a);return;}const base=baseVolumes.get(a)||.8,start=performance.now();const timer=setInterval(()=>{const progress=Math.min(1,(performance.now()-start)/350);HOHSettings.volume(a,base*(1-progress));if(progress>=1)stop(a);},25);fades.set(a,timer);}
+ function finishInstant(id){if(!instant||(id&&instant.id!==id))return;const cue=instant;instant=null;clearTimeout(cue.timer);fadeOut(cue.motif);fadeOut(cue.effect);}
  function stopJoker(){clearInterval(jokerFade);jokerFade=null;stop(joker);joker=null;}
  function startInstant(c){finishInstant();const cue={id:c.id,motif:play('instant-reveal.mp3'),effect:null,timer:null};instant=cue;const file=c.effect==='door'?'death-door.mp3':c.effect==='reaper'?'collector.mp3':null;if(file)cue.timer=setTimeout(()=>{if(instant!==cue)return;cue.effect=play(file);},2000);}
  function card(c){if(!c)return;if(c.type==='instant'){startInstant(c);return;}if(c.effect==='revive')return;if(c.type==='joker'){stopJoker();joker=play('joker-song.mp3',.65);jokerFade=setInterval(()=>{if(!joker)return;const fade=Math.max(0,(joker.currentTime-14)/3);HOHSettings.volume(joker,.65*Math.max(0,1-fade));if(fade>=1||joker.ended)stopJoker();},50);return;}play(c.type==='legendary'?'legendary-play.mp3':c.type==='heart'?'heart-play.mp3':'basic-play.mp3');}

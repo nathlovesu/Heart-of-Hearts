@@ -48,7 +48,7 @@ window.HOHCollectionUI=(()=>{
   const grid=root.querySelector('#book-grid');grid.replaceChildren();
   const filter='gameplay';
   const category=item=>{const c=HOHCards.byId[item.gameplayId];return c.type==='joker'?'Jokers':c.type==='instant'?'Instants':c.classification==='relic'?'Relics':c.type==='legendary'?'Legendaries':c.type==='dud'?'Dud':'Numbered cards';};
-  const sections=['Numbered cards','Legendaries','Jokers','Instants','Relics','Dud'];
+  const sections=['Numbered cards','Legendaries','Jokers','Instants','Dud','Relics'];
   const visibleItems=content.items.filter(i=>i.released&&i.kind==='gameplay').sort((a,b)=>sections.indexOf(category(a))-sections.indexOf(category(b)));let currentCategory;
   for(const item of visibleItems){
    const group=category(item);if(group!==currentCategory){currentCategory=group;const heading=document.createElement('h2');heading.className='book-section-heading';heading.textContent=group;grid.append(heading);}
