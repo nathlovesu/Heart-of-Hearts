@@ -1,0 +1,1 @@
+globalThis.HOH_CONFIG={basicLimit:3,reactionMs:10000,legendaryReactionMs:3000,paceMs:3500,mimicSource:'discard'};

@@ -1,0 +1,12 @@
+{
+  "name": "heart-of-hearts-online",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/online.test.js tests/exposed-heart.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,10 @@
+HEART OF HEARTS — ONLINE PACKAGE
+
+Extract this ZIP. Open ONLINE-SETUP.md for instructions.
+
+Local online preview: run npm start in this folder, then open http://localhost:8766.
+Public multiplayer: deploy the complete folder to Render as a free Node web service.
+Opening index.html directly is offline only.
+
+Private rooms generate codes automatically. Join via a code or invite link. No friends-list feature yet.
+

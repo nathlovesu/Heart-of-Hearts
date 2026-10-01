@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heart of Hearts Demo</title><meta name="description" content="A four-player card table. One human, three programmed opponents. No AI account or API needed."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23211633'/%3E%3Ctext x='4' y='25' font-size='28' fill='%23d6a9d9'%3E♥%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="style.css?v=183"><link rel="stylesheet" href="menu.css?v=183"><link rel="stylesheet" href="characters.css?v=183"><link rel="stylesheet" href="menu-future.css?v=183"><link rel="stylesheet" href="responsive.css?v=183"></head><body><section id="jungle-entry" aria-label="Welcome to Heart of Hearts Demo"><div class="jungle-canopy" aria-hidden="true"></div><div class="jungle-mist" aria-hidden="true"></div><div class="entry-content"><div class="lobby-suits" aria-hidden="true"><span>♠</span><span>♥</span><span class="lobby-jester"></span><span>♦</span><span>♣</span></div><h1>Heart of<br>Hearts</h1><button id="enter-game" type="button">▶ &nbsp; PLAY</button></div></section>
+<header><a class="brand" href="./"><span>♥</span> HEART OF HEARTS DEMO</a><div class="header-right"><span class="offline">● LOCAL BOTS</span><button id="rules-button">Rules & cards</button><button id="restart">New game</button></div></header>
+<main><section class="table" aria-label="Card table"><div class="table-grain"></div><div id="opponents"></div><div class="centre"><div class="table-title"></div><div class="piles"><div class="pile-group"><button type="button" id="draw-pile" class="deck back purple" aria-label="Draw a card and end your turn"><span>✦</span><b>H♥H</b><span>✦</span></button><div class="pile-label">DRAW PILE <b id="deck-count"></b></div></div><div class="played-group"><div id="discard" class="shared-pile" aria-label="Top discard card"><span id="played" class="played-slot"><span>♥</span></span></div><div class="pile-label">PLAYED / DISCARD <b id="discard-count">0</b></div><div id="play-label" class="pile-label">PLAY CARDS HERE</div></div></div><div id="status" role="status" aria-live="polite">Your turn</div><div id="reaction-status"></div></div><div id="human-seat"></div></section>
+<section class="hand-panel"><div class="hand-heading"><div><span class="eyebrow" id="hand-kicker">YOUR PRIVATE HAND</span><h1 id="turn-title">Make your move.</h1></div><div class="turn-actions"><span id="allowance">0 / 2 basic cards played</span><button class="primary" id="draw-button">Draw & end turn <span>↗</span></button></div></div><div id="hand" class="hand"></div><div class="bottom-bar"><span id="hint">Play up to 3 Utility / Heart cards, then a Legendary or draw.</span><div><label for="pace">Pace</label> <select id="pace"><option value="5000">Extra slow</option><option value="3500" selected>Relaxed</option><option value="1800">Quick</option></select><button id="pause">Pause game</button></div></div></section>
+<details class="journal"><summary>Table journal <span id="last-log"></span></summary><ol id="log"></ol></details></main>
+<dialog id="choice" aria-labelledby="choice-title" aria-describedby="choice-context"><div class="dialog-heading"><span class="eyebrow">PRIVATE DECISION</span><h2 id="choice-title"></h2><p id="choice-context"></p></div><div id="choice-options"></div></dialog>
+<dialog id="rules" class="rulebook"><button class="close" data-close="rules" aria-label="Close rules">×</button><span class="eyebrow">HEART OF HEARTS</span><h2>How to play</h2><h3 class="winning-heading">🏆 Win Conditions</h3><section class="win-rule"><h4><span>1</span> ☀️ + 🌕 · Heart of the Sun + Full Moon</h4><p>The primary win. Puppet Master redirects this win to its living original caster.</p></section><section class="win-rule"><h4><span>2</span> 🎭 + 🌕 · Fleeting Illusion + Full Moon</h4><p>Only if nobody achieves the primary win, Fleeting Illusion replaces the Sun. Puppet Master redirects this win too.</p></section><section class="win-rule"><h4><span>3</span> 🃏 · Most Legendaries</h4><p>Count J/Q/K/A and Jokers, including protected cards. Relics and Dud do not count.</p></section><section class="win-rule"><h4><span>4</span> 🔐 · Deadlock</h4><p>If the result is tied, the living Deadlock holder wins, even outside the tied players. Without Deadlock, tied winners share the win.</p></section><p class="rules-intro">Start with 3 Hearts and 5 private cards. A random player begins.</p><p>Eight normal Instants are available. Heart Collector and Death’s Door are guaranteed and cannot be replaced. They enter after dealing.</p><h3>✦ Relics</h3><p>Relics are their own category: Heart of the Sun, Full Moon (3 copies), Fleeting Illusion, Deadlock and Cursed Moon. Keep them in your hand; they are not played and do not count as Legendaries. Sun + Full Moon is the primary win; Fleeting Illusion + Full Moon is the fallback win; Deadlock decides a tie. Cursed Moon is a penalty Relic: lose 1 Heart at game end, then discard it. It does not count as a Full Moon.</p><h3>🎴 Your turn</h3><p>Paying to remove a face-up effect costs 1 action, regardless of the number of cards paid.</p><div class="rules-turn"><p>Use up to <b>3 actions</b>: play Utility / Heart cards or remove a face-up effect by paying its removal cost. Then play <b>1 Legendary</b> or <b>draw to end your turn</b>. Encore allows 2 Legendaries on your next turn. Foresight ends your turn without drawing.</p><p>Drawn Instants appear in the middle before resolving. Altered Fate returns yours to the top and ends your turn. Nullifier destroys it. Sacrifice must be removed before playing a Legendary.</p></div><p>Choose the player target first, then every Legendary play has a universal 3-second reaction window. Any player may react. Return-card reactions allow 10 seconds. Private decision prompts allow 30 seconds.</p><details class="rules-section"><summary>🃏 Jokers &amp; purple backs</summary><p>Only 2 of 6 Jokers enter each game. Pandora can privately exchange with the hidden excluded pool. Mimic copies the exact top discard, including other Jokers but not Instants. Masquerade chooses any Legendary matching the top J/Q/K/A rank.</p><p>Purple backs do not guarantee a scoring Legendary. Only cards classified as Legendary, including Jokers, qualify for Legendary interactions. Sun, Full Moons, Fleeting Illusion, Deadlock, Cursed Moon, Dud and Instants also have purple backs.</p></details><details class="rules-section"><summary>❤️ Hearts &amp; ending effects</summary><p>The last completed draw ends the game if the deck remains empty. Parasite kills its holder; Cursed and Cursed Moon each cost 1 Heart. Discard Cursed Moon afterward. 2♥ Final Blessing revives you with full Hearts; 3♥ Second Chance revives you with 1 Heart. If you hold both, choose one.</p><p>Heartbreak blocks Heart-suit plays, including both revival cards, but allows receiving healing. Death returns Legendaries to the shuffled deck and discards Basic hand cards.</p></details><details class="rules-section"><summary>⏱️ Timing &amp; clarifications</summary><ul id="notes"></ul></details><div id="catalogue" hidden></div></dialog>
+
+<dialog id="ending"><span class="eyebrow">THE LAST CARD HAS FALLEN</span><h2 id="winner"></h2><p id="win-reason"></p><div id="scores"></div><button class="primary" id="play-again">Play again</button><button data-close="ending">See the table</button></dialog>
+<dialog id="history-dialog"><h2>Previous actions</h2><button onclick="this.closest('dialog').close()">Close</button><ol id="history-log"></ol></dialog><script src="cards.js?v=183"></script><script src="config.js?v=183"></script><script src="match-setup.js?v=183"></script><script src="engine.js?v=183"></script><script src="artwork.js?v=183"></script><script src="turn-clock.js?v=183"></script><script src="settings.js?v=183"></script><script src="sound-effects.js?v=183"></script><script src="characters.js?v=183"></script><script src="app.js?v=183"></script><script src="shop.js?v=183"></script><script src="season-pass.js?v=183"></script><script src="collectible-content.js?v=183"></script><script src="collectible-core.js?v=183"></script><script src="local-preview-account.js?v=183"></script><script src="collection-ui.js?v=183"></script><script src="game-ux.js?v=183"></script><script src="tutorial.js?v=183"></script><script src="customise.js?v=183"></script><script src="menu-future.js?v=183"></script><script src="menu.js?v=183"></script><script src="game-settings.js?v=183"></script></body></html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
